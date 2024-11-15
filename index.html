@@ -19,6 +19,12 @@
 
   <button id="loadDataBtn" class="btn btn-primary mb-3" disabled>Load Data</button>
 
+  <!-- Date Filter -->
+  <div class="mb-3">
+    <label for="datePicker" class="form-label">Select Date</label>
+    <input type="date" id="datePicker" class="form-control" disabled>
+  </div>
+
   <div id="table-container" class="table-responsive d-none">
     <h5>Showing <span id="row-count"></span> rows across <span id="page-count"></span> pages</h5>
     <table id="dataTable" class="table table-bordered table-hover">
@@ -55,6 +61,7 @@
 
 <script>
   let db, data, currentPage = 1, rowsPerPage = 10;
+  let filteredData = [];  // Array to store filtered rows by date
 
   // Initialize SQL.js
   initSqlJs({ locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${filename}` })
@@ -72,6 +79,7 @@
           const buffer = await file.arrayBuffer();
           db = new SQL.Database(new Uint8Array(buffer));
           loadData();
+          document.getElementById("datePicker").disabled = false;
           displayTable();
           updatePaginationButtons();
         } catch (error) {
@@ -84,7 +92,7 @@
     });
 
   function loadData() {
-    const query = "SELECT * FROM trending_tickers"; // Replace with your actual table name
+    const query = "SELECT * FROM your_table_name"; // Replace with your actual table name
     const stmt = db.prepare(query);
 
     data = [];
@@ -93,15 +101,16 @@
     }
     stmt.free();
 
-    document.getElementById("row-count").textContent = data.length;
-    document.getElementById("page-count").textContent = Math.ceil(data.length / rowsPerPage);
+    filteredData = data; // Set initial filtered data to all rows
+    document.getElementById("row-count").textContent = filteredData.length;
+    document.getElementById("page-count").textContent = Math.ceil(filteredData.length / rowsPerPage);
     document.getElementById("table-container").classList.remove("d-none");
   }
 
   function displayTable() {
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    const rows = data.slice(start, end);
+    const rows = filteredData.slice(start, end);
 
     const headers = Object.keys(rows[0] || {});
     const tableHeaders = document.getElementById("table-headers");
@@ -129,7 +138,7 @@
   }
 
   function updatePaginationButtons() {
-    const totalPages = Math.ceil(data.length / rowsPerPage);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     document.getElementById("prevPageBtn").disabled = currentPage <= 1;
     document.getElementById("nextPageBtn").disabled = currentPage >= totalPages;
 
@@ -149,6 +158,22 @@
       }
     });
   }
+
+  // Date picker change event to filter data by selected date
+  document.getElementById("datePicker").addEventListener("change", (event) => {
+    const selectedDate = event.target.value; // Get the selected date in "YYYY-MM-DD"
+    if (selectedDate) {
+      filteredData = data.filter(row => row.utc_timestamp.startsWith(selectedDate));
+    } else {
+      filteredData = data; // Show all data if no date is selected
+    }
+    currentPage = 1; // Reset to first page on date change
+    displayTable();
+    updatePaginationButtons();
+
+    document.getElementById("row-count").textContent = filteredData.length;
+    document.getElementById("page-count").textContent = Math.ceil(filteredData.length / rowsPerPage);
+  });
 
   function showErrorModal(message) {
     document.getElementById("errorModalMessage").textContent = message;
