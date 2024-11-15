@@ -7,9 +7,9 @@
   
   <!-- Include Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-
+  
   <!-- Include SQL.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js"></script>
 
   <style>
     .pagination { margin: 10px 0; }
@@ -31,25 +31,33 @@
   </div>
 
   <script>
+    // Configuration to load sql-wasm.wasm from the correct path
+    const config = {
+      locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${filename}`
+    };
+
     let db;
     const rowsPerPage = 10;
     let currentPage = 1;
     let totalRows = 0;
     let data = [];
 
-    document.getElementById("dbfile").addEventListener("change", async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
+    // Initialize SQL.js
+    initSqlJs(config).then(SQL => {
+      document.getElementById("dbfile").addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
 
-      const buffer = await file.arrayBuffer();
-      const SQL = await initSqlJs({ locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${filename}` });
-      db = new SQL.Database(new Uint8Array(buffer));
+        const buffer = await file.arrayBuffer();
+        db = new SQL.Database(new Uint8Array(buffer));
 
-      loadData();
-      displayTable();
-      setupPagination();
+        loadData();
+        displayTable();
+        setupPagination();
+      });
     });
 
+    // Load data from the specified table
     function loadData() {
       const stmt = db.prepare("SELECT * FROM your_table_name");  // Replace `your_table_name` with the actual table name
       data = [];
@@ -59,6 +67,7 @@
       totalRows = data.length;
     }
 
+    // Display data in paginated format
     function displayTable() {
       const tableContainer = document.getElementById("table-container");
       tableContainer.innerHTML = "";
@@ -93,6 +102,7 @@
       tableContainer.appendChild(table);
     }
 
+    // Set up Bootstrap pagination controls
     function setupPagination() {
       const pagination = document.getElementById("pagination");
       pagination.innerHTML = "";
