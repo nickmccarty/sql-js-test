@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paginated SQLite Table</title>
+  
+  <!-- Include Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Include SQL.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+
+  <style>
+    .pagination { margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="container mt-4">
+    <h1>Paginated SQLite Table</h1>
+    
+    <!-- File input to upload the SQLite DB -->
+    <input type="file" id="dbfile" class="form-control mb-3" accept=".sqlite,.db">
+    
+    <!-- Table container -->
+    <div id="table-container" class="table-responsive"></div>
+    
+    <!-- Pagination -->
+    <nav aria-label="Page navigation" id="pagination"></nav>
+  </div>
+
+  <script>
+    let db;
+    const rowsPerPage = 10;
+    let currentPage = 1;
+    let totalRows = 0;
+    let data = [];
+
+    document.getElementById("dbfile").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+      const SQL = await initSqlJs({ locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${filename}` });
+      db = new SQL.Database(new Uint8Array(buffer));
+
+      loadData();
+      displayTable();
+      setupPagination();
+    });
+
+    function loadData() {
+      const stmt = db.prepare("SELECT * FROM your_table_name");  // Replace `your_table_name` with the actual table name
+      data = [];
+      while (stmt.step()) data.push(stmt.getAsObject());
+      stmt.free();
+
+      totalRows = data.length;
+    }
+
+    function displayTable() {
+      const tableContainer = document.getElementById("table-container");
+      tableContainer.innerHTML = "";
+
+      const startRow = (currentPage - 1) * rowsPerPage;
+      const endRow = Math.min(startRow + rowsPerPage, totalRows);
+      const rows = data.slice(startRow, endRow);
+
+      if (rows.length === 0) {
+        tableContainer.innerHTML = "<p>No data available</p>";
+        return;
+      }
+
+      const table = document.createElement("table");
+      table.classList.add("table", "table-striped", "table-bordered");
+
+      const headerRow = table.insertRow();
+      Object.keys(rows[0]).forEach(col => {
+        const th = document.createElement("th");
+        th.textContent = col;
+        headerRow.appendChild(th);
+      });
+
+      rows.forEach(row => {
+        const rowElement = table.insertRow();
+        Object.values(row).forEach(value => {
+          const cell = rowElement.insertCell();
+          cell.textContent = value;
+        });
+      });
+
+      tableContainer.appendChild(table);
+    }
+
+    function setupPagination() {
+      const pagination = document.getElementById("pagination");
+      pagination.innerHTML = "";
+
+      const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+      const ul = document.createElement("ul");
+      ul.classList.add("pagination");
+
+      // Previous page button
+      const prevItem = document.createElement("li");
+      prevItem.classList.add("page-item", currentPage === 1 ? "disabled" : "");
+      const prevButton = document.createElement("button");
+      prevButton.classList.add("page-link");
+      prevButton.textContent = "Previous";
+      prevButton.addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          displayTable();
+          setupPagination();
+        }
+      });
+      prevItem.appendChild(prevButton);
+      ul.appendChild(prevItem);
+
+      // Page number buttons
+      for (let i = 1; i <= totalPages; i++) {
+        const item = document.createElement("li");
+        item.classList.add("page-item", i === currentPage ? "active" : "");
+        const button = document.createElement("button");
+        button.classList.add("page-link");
+        button.textContent = i;
+        button.addEventListener("click", () => {
+          currentPage = i;
+          displayTable();
+          setupPagination();
+        });
+        item.appendChild(button);
+        ul.appendChild(item);
+      }
+
+      // Next page button
+      const nextItem = document.createElement("li");
+      nextItem.classList.add("page-item", currentPage === totalPages ? "disabled" : "");
+      const nextButton = document.createElement("button");
+      nextButton.classList.add("page-link");
+      nextButton.textContent = "Next";
+      nextButton.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          displayTable();
+          setupPagination();
+        }
+      });
+      nextItem.appendChild(nextButton);
+      ul.appendChild(nextItem);
+
+      pagination.appendChild(ul);
+    }
+  </script>
+
+  <!-- Include Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
