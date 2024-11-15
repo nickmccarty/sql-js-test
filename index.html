@@ -95,7 +95,7 @@
     // Load data from the specified table
     function loadData() {
       try {
-        const stmt = db.prepare("SELECT * FROM your_table_name");  // Replace `your_table_name` with the actual table name
+        const stmt = db.prepare("SELECT * FROM trending_tickers");  // Replace `your_table_name` with the actual table name
         data = [];
         while (stmt.step()) data.push(stmt.getAsObject());
         stmt.free();
